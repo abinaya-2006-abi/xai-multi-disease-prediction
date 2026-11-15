@@ -1,55 +1,53 @@
-# 🏥 Explainable AI (XAI) Multi-Disease Prediction System
+# Explainable AI-Based Multi-Disease Prediction Using Ensemble Learning and SHAP
 
-An end-to-end, interpretable clinical decision support system that predicts four chronic diseases—**Heart Disease**, **Diabetes**, **Chronic Kidney Disease (CKD)**, and **Liver Disease**—under a single unified platform. 
+Code accompanying an IEEE conference paper. The repository contains code only: **no datasets, trained models
+or results are included**; they are produced when you run the pipeline.
 
-The system combines a novel **LightGBM + CatBoost Stacking Ensemble** (with a Logistic Regression meta-learner) with **SHAP (SHapley Additive exPlanations)** to deliver both high predictive accuracy and transparent, patient-level clinical reasoning via an interactive **Streamlit** web application.
+## What it does
+- Predicts heart disease, diabetes, chronic kidney disease and liver disease from tabular clinical data.
+- Compares 13 models (LR, DT, KNN, SVM, RF, Extra Trees, Gradient Boosting, XGBoost, LightGBM, CatBoost,
+  ExtraTrees+LightGBM stack, LightGBM+CatBoost voting) with a proposed **LightGBM + CatBoost stacking ensemble**
+  (logistic-regression meta-learner).
+- Leakage-safe preprocessing: KNN imputation -> MinMax scaling -> SMOTE (training folds only).
+- Explains the full stacked model with SHAP (beeswarm, bar, waterfall, force plot, mean |SHAP| table).
+- Includes a Streamlit demo (research prototype).
 
----
+## Structure
+```
+data/get_data.py     download UCI datasets   | data/README.md  dataset sources, DOIs, licences
+src/common.py        loading, cleaning, pipeline
+src/models.py        the 13 models
+src/train_models.py  train/evaluate, saves proposed model
+src/shap_analysis.py SHAP plots
+app/app.py           Streamlit demo
+tests/               smoke test on synthetic data
+notebooks/run_in_colab.ipynb
+```
 
-## 🌟 Key Features
+## Setup
+```
+python -m venv venv
+venv\Scripts\activate        # Windows (Linux/macOS: source venv/bin/activate)
+pip install -r requirements.txt
+```
 
-* **Unified Multi-Disease Prediction:** Predicts risk across four major chronic conditions from a single interface.
-* **Novel Stacking Ensemble Architecture:** Combines **LightGBM** (leaf-wise tree growth) and **CatBoost** (ordered boosting) as base learners with a **Logistic Regression** meta-learner, benchmarked against 12 baseline and ensemble models.
-* **Clinical Transparency with SHAP:** Generates global **Summary Plots**, patient-specific **Force Plots**, and cumulative **Waterfall Plots** to explain *why* a prediction was made.
-* **Robust Clinical Preprocessing:** Implements K-Nearest Neighbors (`KNNImputer`) for missing clinical values, `MinMaxScaler` normalization, and `SMOTE` oversampling on training splits to address class imbalance without data leakage.
-* **Interactive Web Dashboard:** Built with **Streamlit** for real-time patient parameter input, risk probability scoring, and instant visual SHAP explanations.
+## Usage
+```
+python data/get_data.py                 # heart, kidney, liver; then add data/raw/diabetes.csv manually
+python src/train_models.py              # add --diseases heart kidney, --tune as needed
+python src/shap_analysis.py
+streamlit run app/app.py
+pytest tests                            # synthetic-data smoke test
+```
+Outputs go to `results/` and `models/`. Seed 42, 80/20 stratified split, 5-fold CV.
 
----
+## Data Availability (for the paper)
+The datasets are public: Heart Disease (doi:10.24432/C52P4X), Chronic Kidney Disease (doi:10.24432/C5G020) and
+ILPD (doi:10.24432/C5D02C) from the UCI Machine Learning Repository under CC BY 4.0, and the Pima Indians Diabetes
+Database from Kaggle (originating from NIDDK). Code is available at
+https://github.com/abinaya-2006-abi/xai-multi-disease-prediction. Data are not redistributed; `data/get_data.py`
+and `data/README.md` describe how to obtain them.
 
-## 📊 Datasets Used
-
-All datasets are publicly available clinical benchmarks sourced from the UCI Machine Learning Repository and Kaggle:
-
-| Disease Module | Dataset Name | Samples | Features | Target Variable |
-| :--- | :--- | :---: | :---: | :--- |
-| **Heart Disease** | UCI Heart Disease Dataset | 303 | 13 | `target` (0 = Healthy, 1 = Disease) |
-| **Diabetes** | Pima Indians Diabetes Dataset | 768 | 8 | `Outcome` (0 = Negative, 1 = Positive) |
-| **Kidney Disease** | UCI Chronic Kidney Disease (CKD) | 400 | 24 | `classification` (`ckd` = 1, `notckd` = 0) |
-| **Liver Disease** | Indian Liver Patient Dataset (ILPD) | 583 | 10 | `Dataset` (1 = Liver Patient, 0 = Healthy) |
-
----
-
-## 🏗️ System Architecture & Pipeline
-
-1. **Data Cleaning & Imputation:** Biologically impossible zero values (e.g., Glucose, BMI in Diabetes) and malformed strings (in CKD) are converted to `NaN` and imputed using `KNNImputer (k=5)`.
-2. **Encoding & Scaling:** Categorical clinical markers are encoded numerically, and continuous features are normalized to `[0, 1]` using `MinMaxScaler`.
-3. **Train/Test Split & Balancing:** Stratified 80/20 split followed by `SMOTE` applied strictly to the training set.
-4. **Model Benchmarking:** Evaluated across 13 classifiers (Logistic Regression, Decision Tree, KNN, SVM, Random Forest, Extra Trees, Gradient Boosting, XGBoost, LightGBM, CatBoost, ExtraTrees+LightGBM Stack, LightGBM+CatBoost Voting, and the **Proposed LightGBM+CatBoost Stack**) using 10-fold stratified cross-validation.
-5. **Explainability & Deployment:** Extracts feature attributions via `shap.TreeExplainer` and serves predictions through Streamlit.
-
----
-
-## 📁 Project Structure
-
-```text
-xai-multi-disease-prediction/
-│
-├── app/                      # Streamlit web application files
-│   └── app.py                # Main dashboard interface
-├── data/                     # Raw and processed clinical datasets
-├── models/                   # Saved trained models (.pkl) and scalers
-├── notebooks/                # Jupyter notebooks for EDA, training & benchmarking
-├── results/                  # Model comparison tables (.xlsx) and SHAP plots (.png/.html)
-├── src/                      # Modular Python scripts for preprocessing and training
-├── requirements.txt          # Python dependencies for reproducibility
-└── README.md                 # Project documentation
+## Limitations and disclaimer
+Small public datasets; no external or clinical validation. This is a research prototype, **not a medical device**
+and not for diagnosis or treatment.
